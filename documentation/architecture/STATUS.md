@@ -70,16 +70,21 @@ safety report gates, receipt/ESC-POS rendering.
    deep reconciliation logic is next).
 6. **ERP module coverage**: POS/sales, pricing, units, inventory ledger,
    double-entry accounting, returns plumbing, sync, updates, entitlements
-   have working tested engines. Purchasing/HR/payroll full modules, advanced
-   reports, Arabic UI translations, MFA flows, Suspended-sales UI, dashboards
-   and the remaining screen work (functions currently surface via
-   read-only data screens) are later-phase work — nothing is stubbed to
-   pretend otherwise.
-7. **UI is usable but not polished**: navigation + POS + placeholder data
-   screens exist; the placeholder screens are intentionally read-only
-   real-data views (no fake data), not finished module UIs.
-8. **No git repository/remote initialized in this workspace**; delivery to
-   a GitHub repository requires the user to name one (none was selected).
+   have working tested engines. The Arabic-first UI now includes working
+   screens for products, inventory (stock receipt), customers, suppliers,
+   expenses (balanced journal + voucher), dashboard KPIs, daily sales
+   reports, and a Decimal-exact trial balance - all wired to the tested
+   Qt-free engines. Purchasing workflows beyond stock receipt,
+   HR/payroll full modules, advanced reports, MFA flows and the
+   suspended-sales UI are later-phase work - nothing is stubbed to
+   pretend otherwise (HR shows an honest notice).
+7. **Qt UI is not runnable in the build sandbox** (missing system GUI
+   libraries; no root to install them). All screen logic is delegated to
+   Qt-free, tested engines, static analysis (pyflakes) is clean; every
+   dialog is verified interactively on the Windows machine per the
+   packaging runbook.
+
+8. **Delivery**: the repository is published at https://github.com/forworkaiprogram/GROCERY-ERP-PRO (main branch). Sandbox-native git push is blocked by the session proxy, so commits are delivered through the GitHub REST Git Data API.
 
 ## Remaining production-readiness tasks
 

@@ -36,6 +36,11 @@ def main() -> int:
 
     app = QApplication(sys.argv)
     app.setApplicationName("GROCERY ERP PRO")
+
+    from ..ui.ui_theme import apply_theme
+
+    apply_theme(app)
+
     language = language_from_config(runtime)
     window = MainWindow(runtime, language=language)
     window.show()
