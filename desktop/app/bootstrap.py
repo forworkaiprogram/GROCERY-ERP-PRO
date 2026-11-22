@@ -37,6 +37,7 @@ class DesktopRuntime:
             os.environ["GROCERY_ERP_HOME"] = str(data_dir)
         self.data_dir = Path(data_dir) if data_dir else app_data_dir()
         self.db = Database(self.data_dir / "grocery_erp.db")
+        self.update_base_url = update_base_url
         self.applied_migrations: list[int] = []
 
     def initialize(self) -> None:

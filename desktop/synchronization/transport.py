@@ -26,10 +26,12 @@ class SyncTransport:
 
 class HttpsSyncTransport(SyncTransport):
     def __init__(self, base_url: str, timeout: float = 15.0):
-        self.base_url = base_url.rstrip("/")
+        self.base_url = (base_url or "").rstrip("/")
         self.timeout = timeout
 
     def post_events(self, events: list[dict], device_token: str) -> list[dict]:
+        if not self.base_url:
+            raise TransportError("sync endpoint is not configured; running offline")
         body = json.dumps({"events": events}).encode("utf-8")
         request = urllib.request.Request(
             f"{self.base_url}/api/v1/sync/events/",
@@ -49,6 +51,8 @@ class HttpsSyncTransport(SyncTransport):
             raise TransportError(f"connection failure: {exc.reason}")
 
     def check_connectivity(self) -> bool:
+        if not self.base_url:
+            return False
         try:
             request = urllib.request.Request(f"{self.base_url}/api/v1/health/", method="HEAD")
             urllib.request.urlopen(request, timeout=self.timeout)
