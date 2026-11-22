@@ -10,6 +10,7 @@ from pathlib import Path
 
 from ..backup.local_backup import LocalBackupManager
 from ..business_logic.accounting import AccountingEngine
+from ..business_logic.cash_sessions import CashSessionService
 from ..business_logic.inventory import InventoryLedger
 from ..business_logic.repositories import (
     CustomerRepository,
@@ -19,6 +20,7 @@ from ..business_logic.repositories import (
 from ..business_logic.sale_engine import SaleEngine
 from ..database.db import Database, app_data_dir
 from ..security.device_identity import DeviceIdentityService
+from ..security.local_auth import LocalAuth
 from ..synchronization.engine import SyncEngine
 from ..synchronization.transport import HttpsSyncTransport
 from ..updates.service import UpdateCenterService
@@ -50,7 +52,10 @@ class DesktopRuntime:
         self.outbox = Outbox(self.db)
         self.inventory = InventoryLedger(self.db)
         self.accounting = AccountingEngine(self.db)
+        self.sessions = CashSessionService(self.db, self.outbox)
         self.backup = LocalBackupManager(self.db)
+        self.local_auth = LocalAuth(self.db)
+        self.local_auth.ensure_default_admin()
         self.db.execute(
             "INSERT OR IGNORE INTO app_config (key, value) VALUES ('app_version', ?)",
             (APP_VERSION,),
@@ -78,9 +83,6 @@ class DesktopRuntime:
         return UpdateCenterService(self.db, key, self.update_base_url)
 
     def _device_token_getter(self):
-        row = self.db.query_one(
-            "SELECT token_hash FROM auth_cache WHERE id=1"
-        )
 
         def getter():
             from ..security.secrets import SecretStore

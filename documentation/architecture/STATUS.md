@@ -8,7 +8,8 @@ PySide6 6.12 installed but not executable here — see Limitations).
 
 | Check | Command | Result |
 |---|---|---|
-| Desktop suite | `python3 -m pytest desktop/tests -p no:cacheprovider --timeout=30 -q` | **44 passed** |
+| Desktop suite | `LD_LIBRARY_PATH=$QT_LIBS QT_QPA_PLATFORM=offscreen python3 -m pytest desktop/tests -p no:cacheprovider -q` | **66 passed** (64 Qt-free engine tests + 2 offscreen-Qt end-to-end smoke) |
+| UI static analysis | `python3 -m pyflakes desktop/ui desktop/app` | clean (new Phase 2 files) |
 | Backend suite | `cd backend && python3 -m pytest -q` | **27 passed** |
 | Django system check | `python3 manage.py check` | no issues |
 | Migration sync | `python3 manage.py makemigrations --check --dry-run` | no changes detected |
@@ -68,21 +69,40 @@ safety report gates, receipt/ESC-POS rendering.
    balances) for cross-device reconciliation reports and the full Super
    Admin dashboard screens are remaining work (Celery beat + tasks exist;
    deep reconciliation logic is next).
-6. **ERP module coverage**: POS/sales, pricing, units, inventory ledger,
-   double-entry accounting, returns plumbing, sync, updates, entitlements
-   have working tested engines. The Arabic-first UI now includes working
-   screens for products, inventory (stock receipt), customers, suppliers,
-   expenses (balanced journal + voucher), dashboard KPIs, daily sales
-   reports, and a Decimal-exact trial balance - all wired to the tested
-   Qt-free engines. Purchasing workflows beyond stock receipt,
-   HR/payroll full modules, advanced reports, MFA flows and the
-   suspended-sales UI are later-phase work - nothing is stubbed to
-   pretend otherwise (HR shows an honest notice).
-7. **Qt UI is not runnable in the build sandbox** (missing system GUI
-   libraries; no root to install them). All screen logic is delegated to
-   Qt-free, tested engines, static analysis (pyflakes) is clean; every
-   dialog is verified interactively on the Windows machine per the
-   packaging runbook.
+6. **ERP module coverage (updated after UI Phase 2)**: the Arabic-first
+   shell is rebuilt as a real ERP workspace modeled on a reference
+   system and wired to the tested engines:
+   - Sidebar navigation like the reference app (`dashboard pos, منتجات،
+     مبيعات، مشتريات، مرتجعات، عملاء، موردون، ديون، جرد، ورديات،
+     محاسبة، مصروفات، تقارير، مستخدمون، مزامنة، تحديثات، اشتراك،
+     إعدادات`) — all backed by real engines; HR stays an honest notice.
+   - Local login dialog (PBKDF2 LocalAuth, offline-capable) with an
+     `admin/admin123` seed and a first-login warning until changed.
+   - RBAC: admin / manager / cashier / accountant see different menus;
+     cashier lands straight on POS.
+   - POS: Arabic RTL, customer picker (with balance/hint), +/− cart
+     editing, tax-total display, payment method, quick-cash with
+     change, F2/F12, current-shift display, local commit + outbox.
+   - Sales: invoice list, item viewer, text receipt preview.
+   - Purchases: full receiving dialog → movements + balanced journal +
+     supplier balance + outbox, listed with paid/credit split.
+   - Returns: invoice lookup, remaining-quantity enforcement, real
+     `return_sale` (refund journal + stock restore + `sale.returned`).
+   - Debts: filtered debtors, customer payment posting (journal +
+     balance + payment event).
+   - Stocktake: expected/counted grid, `submit_count` adjustments.
+   - Shifts: open/close with Decimal cash summary and discrepancy.
+   - Users (admin only): create/reset/disable through LocalAuth with
+     last-active-admin protection.
+   - Settings: store config, backup create/restore (verified sidecar),
+     password change, theme (light/dark) + language.
+   - Light/dark QSS theme with explicit palettes (fixes the earlier
+     black-window class of bugs), theme toggle + Ctrl+K palette.
+7. **Qt runs headless in this sandbox** (offscreen platform); the
+   end-to-end business-flow smoke test (login → purchase → POS sale →
+   return → stocktake → debt payment → shift close → backup → theme)
+   runs green here. The packaged EXE must still be validated on real
+   Windows per rule 26.
 
 8. **Delivery**: the repository is published at https://github.com/forworkaiprogram/GROCERY-ERP-PRO (main branch). Sandbox-native git push is blocked by the session proxy, so commits are delivered through the GitHub REST Git Data API.
 

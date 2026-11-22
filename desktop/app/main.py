@@ -1,15 +1,14 @@
 """Application entry point (EXE target).
 
-Initializes the Qt-free runtime first (migrations, device identity), then
-starts the Qt UI and background workers. If Qt cannot start (missing
-platform plugins), the app exits with a clear error instead of running
-degraded business logic.
+Initializes the Qt-free runtime first (migrations, device identity,
+local auth), then shows the local login dialog (PBKDF2, offline), then
+starts the themed main window and background workers. If Qt cannot
+start, the app exits with a clear error instead of running degraded.
 """
 
 from __future__ import annotations
 
 import logging
-import os
 import sys
 
 
@@ -25,10 +24,9 @@ def main() -> int:
         return 2
 
     try:
-        from PySide6.QtCore import QThread, Qt
+        from PySide6.QtCore import QThread
         from PySide6.QtWidgets import QApplication
 
-        from ..ui.main_window import MainWindow
         from ..ui.sync_workers import SyncWorker
     except ImportError as exc:
         logging.critical("Qt unavailable in this environment: %s", exc)
@@ -37,12 +35,21 @@ def main() -> int:
     app = QApplication(sys.argv)
     app.setApplicationName("GROCERY ERP PRO")
 
-    from ..ui.ui_theme import apply_theme
+    from ..ui.theme import apply_theme, configured_theme
 
-    apply_theme(app)
+    theme = configured_theme(runtime.db)
+    apply_theme(app, theme)
+
+    from ..ui.login_dialog import LoginDialog
+    from ..ui.main_window import MainWindow
 
     language = language_from_config(runtime)
-    window = MainWindow(runtime, language=language)
+    login = LoginDialog(runtime, language=language)
+    if not login.exec():
+        runtime.shutdown()
+        return 0
+
+    window = MainWindow(runtime, language=language, user=login.user)
     window.show()
 
     sync_engine = runtime.build_sync_engine()

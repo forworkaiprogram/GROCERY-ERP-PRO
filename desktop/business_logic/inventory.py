@@ -61,14 +61,17 @@ class InventoryLedger:
         allocated = D(alloc["allocated_qty"])
         # The device may not exceed its allocation with its own unacknowledged
         # offline sales: consume the allowance by this device's pending sales.
-        pending = self.db.query_one(
-            "SELECT COALESCE(SUM(si.quantity), 0) AS sold FROM sale_items si"
+        # Quantity is summed in Python from TEXT rows: SQLite SUM() on TEXT
+        # silently coerces to float, which is prohibited.
+        pending_rows = self.db.query_all(
+            "SELECT si.quantity FROM sale_items si"
             " JOIN sales s ON s.uuid = si.sale_uuid"
-            " WHERE s.device_id=? AND s.branch_id=? AND s.sync_state <> 'ACKNOWLEDGED'"
-            " AND si.product_uuid=?",
+            " WHERE s.device_id=? AND s.branch_id=?"
+            " AND s.sync_state <> 'ACKNOWLEDGED' AND si.product_uuid=?",
             (device_id, branch_id, product_uuid),
         )
-        remaining = allocated - D(pending["sold"])
+        pending = sum((D(r["quantity"]) for r in pending_rows), Decimal(0))
+        remaining = allocated - pending
         capped = allocated if allocated < branch_qty else branch_qty
         return remaining if remaining < capped else capped
 

@@ -2,14 +2,11 @@
 
 from __future__ import annotations
 
-import uuid as uuidlib
-
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QFormLayout,
     QHBoxLayout,
     QHeaderView,
-    QLabel,
     QLineEdit,
     QMessageBox,
     QPushButton,
@@ -31,6 +28,26 @@ def qty_text(value) -> str:
     if "." in text:
         text = text.rstrip("0").rstrip(".")
     return text or "0"
+
+
+class SessionContextMixin:
+    """Session context helpers shared by non-ListScreen pages."""
+
+    def _tenant_id(self) -> str:
+        if self.runtime.device:
+            return self.runtime.device.get("tenant_id") or "local"
+        return "local"
+
+    def _branch_id(self) -> str:
+        return (self.runtime.device.get("branch_id") or "main") \
+            if self.runtime.device else "main"
+
+    def _device_id(self) -> str:
+        return self.runtime.device["device_id"]
+
+    def _user_uuid(self):
+        user = getattr(self, "user", None) or {}
+        return user.get("uuid") or None
 
 
 class FormDialog(QWidget):
@@ -105,6 +122,17 @@ class ListScreen(QWidget):
         if self.runtime.device:
             return self.runtime.device.get("tenant_id") or "local"
         return "local"
+
+    def _branch_id(self) -> str:
+        return (self.runtime.device.get("branch_id") or "main") \
+            if self.runtime.device else "main"
+
+    def _device_id(self) -> str:
+        return self.runtime.device["device_id"]
+
+    def _user_uuid(self):
+        user = getattr(self, "user", None) or {}
+        return user.get("uuid") or None
 
     def _setup_table(self, columns: list[str]) -> None:
         self.columns = [tr(self.language, c) for c in columns]
