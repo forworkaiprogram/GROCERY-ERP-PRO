@@ -1,0 +1,5 @@
+# Desktop EXE build requirements (Windows build machine only).
+PySide6>=6.7
+cryptography>=42.0
+pyinstaller>=6.10
+pywin32; sys_platform == "win32"

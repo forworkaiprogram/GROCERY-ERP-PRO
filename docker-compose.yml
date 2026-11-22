@@ -1,0 +1,121 @@
+# GROCERY ERP PRO - cloud backend stack.
+# Production must sit behind TLS (nginx below terminates it). All secrets
+# come from a real environment file (cp .env.example .env and fill it in);
+# nothing in this repository contains a production secret.
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./infrastructure/backups/restorable:/backups
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/Dockerfile
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      REDIS_URL: redis://redis:6379/0
+      DJANGO_DEBUG: "0"
+      DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS}
+      DJANGO_SECRET_KEY_FILE: /run/secrets/django_secret_key
+      UPDATE_SIGNING_KEY_PATH: /run/secrets/update_signing_key
+      ENTITLEMENT_SIGNING_KEY_PATH: /run/secrets/entitlement_signing_key
+      UPDATE_STORAGE_PATH: /var/lib/grocery-erp/update-storage
+    volumes:
+      - update_storage:/var/lib/grocery-erp/update-storage
+      - static_files:/var/lib/grocery-erp/static
+    secrets:
+      - django_secret_key
+      - update_signing_key
+      - entitlement_signing_key
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  celery-worker:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/Dockerfile
+    command: ["celery", "-A", "config", "worker", "-l", "INFO"]
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      REDIS_URL: redis://redis:6379/0
+      DJANGO_DEBUG: "0"
+      UPDATE_SIGNING_KEY_PATH: /run/secrets/update_signing_key
+      ENTITLEMENT_SIGNING_KEY_PATH: /run/secrets/entitlement_signing_key
+    secrets:
+      - django_secret_key
+      - update_signing_key
+      - entitlement_signing_key
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  celery-beat:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/Dockerfile
+    command: ["celery", "-A", "config", "beat", "-l", "INFO"]
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      REDIS_URL: redis://redis:6379/0
+      DJANGO_DEBUG: "0"
+    secrets:
+      - update_signing_key
+      - entitlement_signing_key
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  nginx:
+    image: nginx:1.27-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./infrastructure/nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./infrastructure/nginx/certs:/etc/nginx/certs:ro
+      - static_files:/var/lib/grocery-erp/static:ro
+      - update_storage:/var/lib/grocery-erp/update-storage:ro
+    depends_on:
+      - backend
+
+volumes:
+  pgdata:
+  redisdata:
+  update_storage:
+  static_files:
+
+secrets:
+  django_secret_key:
+    file: ./secrets/django_secret_key.txt
+  update_signing_key:
+    file: ./secrets/update_signing_key.pem
+  entitlement_signing_key:
+    file: ./secrets/entitlement_signing_key.pem

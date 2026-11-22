@@ -1,0 +1,36 @@
+# UTF-8
+# Windows VERSIONINFO resource for GROCERY ERP PRO (referenced by the
+# PyInstaller spec). Keep in sync with desktop/app/bootstrap.py APP_VERSION
+# and the release record published to the update service.
+VSVersionInfo(
+  ffi=FixedFileInfo(
+    filevers=(1, 0, 0, 0),
+    prodvers=(1, 0, 0, 0),
+    mask=0x3f,
+    flags=0x0,
+    OS=0x40004,
+    fileType=0x1,
+    subtype=0x0,
+    date=(0, 0),
+  ),
+  kids=[
+    StringFileInfo(
+      [
+        StringTable(
+          '040904b0',
+          [
+            StringStruct('CompanyName', 'Grocery ERP Pro'),
+            StringStruct('FileDescription', 'GROCERY ERP PRO - Enterprise grocery ERP'),
+            StringStruct('FileVersion', '1.0.0.0'),
+            StringStruct('InternalName', 'GroceryERPPro'),
+            StringStruct('LegalCopyright', '(c) Grocery ERP Pro. All rights reserved.'),
+            StringStruct('OriginalFilename', 'GroceryERPPro.exe'),
+            StringStruct('ProductName', 'GROCERY ERP PRO'),
+            StringStruct('ProductVersion', '1.0.0.0'),
+          ],
+        )
+      ]
+    ),
+    VarFileInfo([VarStruct('Translation', [1033, 1200])]),
+  ],
+)

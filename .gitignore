@@ -1,0 +1,16 @@
+__pycache__/
+*.py[cod]
+*.sqlite3
+.pytest_cache/
+.env
+secrets/
+*.pem
+!desktop/security/public_keys/*.pub
+build/
+dist/
+dist-gui/
+*.spec.bak
+infrastructure/nginx/certs/
+backend/update-storage/
+desktop/packaging/dist/
+scripts/build/*.tmp
